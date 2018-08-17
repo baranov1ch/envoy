@@ -211,6 +211,15 @@ JsonTranscoderConfig::methodToRequestInfo(const Protobuf::MethodDescriptor* meth
   return ProtobufUtil::Status();
 }
 
+ProtobufUtil::Status
+JsonTranscoderConfig::translateProtoMessageToJson(const Protobuf::Descriptor* descriptor,
+                                                  const Protobuf::Message& message,
+                                                  std::string* json_out) {
+  return ProtobufUtil::BinaryToJsonString(type_helper_->Resolver(),
+                                          Grpc::Common::typeUrl(descriptor->full_name()),
+                                          message.SerializeAsString(), json_out, print_options_);
+}
+
 JsonTranscoderFilter::JsonTranscoderFilter(JsonTranscoderConfig& config) : config_(config) {}
 
 Http::FilterHeadersStatus JsonTranscoderFilter::decodeHeaders(Http::HeaderMap& headers,
@@ -342,6 +351,8 @@ Http::FilterDataStatus JsonTranscoderFilter::encodeData(Buffer::Instance& data, 
     return Http::FilterDataStatus::Continue;
   }
 
+  has_body_ = true;
+
   // TODO(dio): Add support for streaming case.
   if (has_http_body_output_) {
     buildResponseFromHttpBodyOutput(*response_headers_, data);
@@ -377,6 +388,7 @@ Http::FilterTrailersStatus JsonTranscoderFilter::encodeTrailers(Http::HeaderMap&
 
   if (data.length()) {
     encoder_callbacks_->addEncodedData(data, true);
+    has_body_ = true;
   }
 
   if (method_->server_streaming()) {
@@ -396,6 +408,30 @@ Http::FilterTrailersStatus JsonTranscoderFilter::encodeTrailers(Http::HeaderMap&
   const Http::HeaderEntry* grpc_message_header = trailers.GrpcMessage();
   if (grpc_message_header) {
     response_headers_->insertGrpcMessage().value(*grpc_message_header);
+  }
+
+  if (!has_body_ && grpc_status && grpc_status.value() != Grpc::Status::GrpcStatus::InvalidCode &&
+      grpc_status.value() != Grpc::Status::GrpcStatus::Ok) {
+    // Send serialized status only if no body has been sent yet.
+    auto status = Grpc::Common::getGrpcStatusBin(trailers);
+    if (!status) {
+      status = std::make_unique<google::rpc::Status>();
+      status->set_code(*grpc_status);
+
+      if (grpc_message_header) {
+        status->set_message(grpc_message_header->value().c_str());
+      }
+    }
+
+    std::string json_status;
+    auto translate_status = config_.translateProtoMessageToJson(*status, &json_status);
+
+    if (!translate_status.ok()) {
+      ENVOY_LOG(debug, "Transcoding status error {}", translate_status.ToString());
+    } else if (!json_status.empty()) {
+      Buffer::OwnedImpl status_data(json_status);
+      encoder_callbacks_->addEncodedData(status_data, true);
+    }
   }
 
   response_headers_->insertContentLength().value(

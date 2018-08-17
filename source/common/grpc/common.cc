@@ -8,6 +8,7 @@
 
 #include "common/buffer/buffer_impl.h"
 #include "common/common/assert.h"
+#include "common/common/base64.h"
 #include "common/common/empty_string.h"
 #include "common/common/enum_to_int.h"
 #include "common/common/fmt.h"
@@ -108,6 +109,32 @@ absl::optional<Status::GrpcStatus> Common::getGrpcStatus(const Http::HeaderMap& 
 std::string Common::getGrpcMessage(const Http::HeaderMap& trailers) {
   const auto entry = trailers.GrpcMessage();
   return entry ? entry->value().c_str() : EMPTY_STRING;
+}
+
+std::unique_ptr<google::rpc::Status> Common::getGrpcStatusBin(const Http::HeaderMap& trailers) {
+  const auto entry = trailers.GrpcStatusDetailsBin();
+  if (!entry) {
+    return std::unique_ptr<google::rpc::Status>();
+  }
+  std::string value(entry->value().c_str());
+  std::string decoded_value;
+  // Some implementations use unpadded base64 encoding for grpc-status-details-bin.
+  if (value.size() % 4 == 0) {
+    decoded_value = Base64::decode(value);
+  } else {
+    decoded_value = Base64::decodeUnpadded(value);
+  }
+
+  if (decoded_value.empty()) {
+    return std::unique_ptr<google::rpc::Status>();
+  }
+
+  auto status = std::make_unique<google::rpc::Status>();
+  if (!status->ParseFromString(decoded_value)) {
+    return std::unique_ptr<google::rpc::Status>();
+  }
+
+  return status;
 }
 
 bool Common::resolveServiceAndMethod(const Http::HeaderEntry* path, std::string* service,

@@ -66,6 +66,11 @@ public:
                    std::unique_ptr<google::grpc::transcoding::Transcoder>& transcoder,
                    const Protobuf::MethodDescriptor*& method_descriptor);
 
+  template <typename Message>
+  ProtobufUtil::Status translateProtoMessageToJson(const Message& message, std::string* json_out) {
+    return translateProtoMessageToJson(Message::descriptor(), message, json_out);
+  }
+
   /**
    * If true, skip clearing the route cache after the incoming request has been modified.
    * This allows Envoy to select the upstream cluster based on the incoming request
@@ -79,6 +84,10 @@ private:
    */
   ProtobufUtil::Status methodToRequestInfo(const Protobuf::MethodDescriptor* method,
                                            google::grpc::transcoding::RequestInfo* info);
+
+  ProtobufUtil::Status translateProtoMessageToJson(const Protobuf::Descriptor* descriptor,
+                                                   const Protobuf::Message& message,
+                                                   std::string* json_out);
 
 private:
   Protobuf::DescriptorPool descriptor_pool_;
@@ -133,6 +142,7 @@ private:
 
   bool error_{false};
   bool has_http_body_output_{false};
+  bool has_body_{false};
 };
 
 } // namespace GrpcJsonTranscoder

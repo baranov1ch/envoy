@@ -5,6 +5,7 @@ package bookstore;
 import "google/api/annotations.proto";
 import "google/api/httpbody.proto";
 import "google/protobuf/empty.proto";
+import "google/rpc/status.proto";
 
 // A simple Bookstore API.
 //
@@ -192,4 +193,8 @@ message DeleteBookRequest {
 message GetAuthorRequest {
   // The ID of the author resource to retrieve.
   int64 author = 1;
+}
+
+message Dummy {
+  google.rpc.Status status = 1;
 }

@@ -35,6 +35,13 @@ TEST(Base64Test, EncodeString) {
   EXPECT_EQ("Zm8=", Base64::encode("fo", 2));
 }
 
+TEST(Base64Test, EncodeRawString) {
+  EXPECT_EQ("", Base64::encodeRaw("", 0));
+  EXPECT_EQ("AAA", Base64::encodeRaw("\0\0", 2));
+  EXPECT_EQ("Zm9v", Base64::encodeRaw("foo", 3));
+  EXPECT_EQ("Zm8", Base64::encodeRaw("fo", 2));
+}
+
 TEST(Base64Test, Decode) {
   EXPECT_EQ("", Base64::decode(""));
   EXPECT_EQ("foo", Base64::decode("Zm9v"));
@@ -71,6 +78,20 @@ TEST(Base64Test, Decode) {
     const char* test_string = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     std::string decoded = Base64::decode(test_string);
     EXPECT_EQ(test_string, Base64::encode(decoded.c_str(), decoded.length()));
+  }
+}
+
+TEST(Base64Test, DecodeRaw) {
+  EXPECT_EQ("", Base64::decodeRaw(""));
+  EXPECT_EQ("foo", Base64::decodeRaw("Zm9v"));
+  EXPECT_EQ("fo", Base64::decodeRaw("Zm8"));
+  EXPECT_EQ("f", Base64::decodeRaw("Zg"));
+  EXPECT_EQ("foobar", Base64::decodeRaw("Zm9vYmFy"));
+  EXPECT_EQ("foob", Base64::decodeRaw("Zm9vYg"));
+
+  {
+    const char* test_string = "\0\1\2\3\b\n\t";
+    EXPECT_FALSE(memcmp(test_string, Base64::decodeRaw("AAECAwgKCQ").data(), 7));
   }
 }
 

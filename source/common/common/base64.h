@@ -27,6 +27,8 @@ public:
    */
   static std::string encode(const char* input, uint64_t length);
 
+  static std::string encodeUnpadded(const char* input, uint64_t length);
+
   /**
    * Base64 decode an input string. Padding is required.
    * @param input supplies the input to decode.
@@ -35,6 +37,8 @@ public:
    * bytes.
    */
   static std::string decode(const std::string& input);
+
+  static std::string decodeUnpadded(const std::string& input);
 };
 
 /**

@@ -23,6 +23,7 @@ envoy_proto_library(
         "api_httpbody_protos",
         "http_api_protos",
         "well_known_protos",
+        "rpc_status_protos",
     ],
 )
 
@@ -36,5 +37,6 @@ envoy_proto_descriptor(
         "api_httpbody_protos",
         "http_api_protos",
         "well_known_protos",
+        "rpc_status_protos",
     ],
 )

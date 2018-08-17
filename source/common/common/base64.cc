@@ -172,6 +172,28 @@ std::string Base64::decode(const std::string& input) {
   return ret;
 }
 
+std::string Base64::decodeUnpadded(const std::string& input) {
+  if (input.empty()) {
+    return EMPTY_STRING;
+  }
+
+  std::string ret;
+  ret.reserve(input.length() / 4 * 3 + 3);
+
+  uint64_t last = input.length() - 1;
+  for (uint64_t i = 0; i < last; ++i) {
+    if (!decodeBase(input[i], i, ret, REVERSE_LOOKUP_TABLE)) {
+      return EMPTY_STRING;
+    }
+  }
+
+  if (!decodeLast(input[last], last, ret, REVERSE_LOOKUP_TABLE)) {
+    return EMPTY_STRING;
+  }
+
+  return ret;
+}
+
 std::string Base64::encode(const Buffer::Instance& buffer, uint64_t length) {
   uint64_t output_length = (std::min(length, buffer.length()) + 2) / 3 * 4;
   std::string ret;
@@ -213,6 +235,23 @@ std::string Base64::encode(const char* input, uint64_t length) {
   }
 
   encodeLast(pos, next_c, ret, CHAR_TABLE, true);
+
+  return ret;
+}
+
+std::string Base64::encodeUnpadded(const char* input, uint64_t length) {
+  uint64_t output_length = (length + 2) / 3 * 4;
+  std::string ret;
+  ret.reserve(output_length);
+
+  uint64_t pos = 0;
+  uint8_t next_c = 0;
+
+  for (uint64_t i = 0; i < length; ++i) {
+    encodeBase(input[i], pos++, next_c, ret, CHAR_TABLE);
+  }
+
+  encodeLast(pos, next_c, ret, CHAR_TABLE, false);
 
   return ret;
 }

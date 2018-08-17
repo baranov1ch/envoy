@@ -75,6 +75,28 @@ TEST(GrpcCommonTest, GetGrpcTimeout) {
   // so we don't test for them.
 }
 
+TEST(GrpcCommonTest, GetGrpcStatusBin) {
+  Http::TestHeaderMapImpl empty_trailers;
+  EXPECT_FALSE(Common::getGrpcStatusBin(empty_trailers));
+
+  Http::TestHeaderMapImpl invalid_value{{"grpc-status-details-bin", "invalid"}};
+  EXPECT_FALSE(Common::getGrpcStatusBin(invalid_value));
+
+  Http::TestHeaderMapImpl unpadded_value{
+      {"grpc-status-details-bin", "CAUSElJlc291cmNlIG5vdCBmb3VuZA"}};
+  auto status = Common::getGrpcStatusBin(unpadded_value);
+  ASSERT_TRUE(status);
+  EXPECT_EQ(Status::GrpcStatus::NotFound, status->code());
+  EXPECT_EQ("Resource not found", status->message());
+
+  Http::TestHeaderMapImpl padded_value{
+      {"grpc-status-details-bin", "CAUSElJlc291cmNlIG5vdCBmb3VuZA=="}};
+  status = Common::getGrpcStatusBin(padded_value);
+  ASSERT_TRUE(status);
+  EXPECT_EQ(Status::GrpcStatus::NotFound, status->code());
+  EXPECT_EQ("Resource not found", status->message());
+}
+
 TEST(GrpcCommonTest, ToGrpcTimeout) {
   Http::HeaderString value;
 

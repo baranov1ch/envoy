@@ -221,6 +221,10 @@ def _envoy_api_deps():
         name = "http_api_protos",
         actual = "@googleapis//:http_api_protos",
     )
+    native.bind(
+        name = "rpc_status_protos",
+        actual = "@googleapis//:rpc_status_protos",
+    )
     _repository_impl(
         name = "six_archive",
         build_file = "@com_google_protobuf//:six.BUILD",

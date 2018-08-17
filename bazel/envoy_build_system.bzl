@@ -419,6 +419,10 @@ def envoy_proto_library(
         cc_proto_deps.append("@googleapis//:http_api_protos")
         py_proto_deps.append("@googleapis//:http_api_protos_py")
 
+    if "rpc_status_protos" in external_deps:
+        cc_proto_deps.append("@googleapis//:rpc_status_protos")
+        py_proto_deps.append("@googleapis//:rpc_status_protos_py")
+
     if "well_known_protos" in external_deps:
         # WKT is already included for Python as part of standard deps above.
         cc_proto_deps.append("@com_google_protobuf//:cc_wkt_protos")
@@ -458,6 +462,10 @@ def envoy_proto_descriptor(name, out, srcs = [], external_deps = []):
 
     if "http_api_protos" in external_deps:
         srcs.append("@googleapis//:http_api_protos_src")
+        include_paths.append("external/googleapis")
+
+    if "rpc_status_protos" in external_deps:
+        srcs.append("@googleapis//:rpc_status_protos_src")
         include_paths.append("external/googleapis")
 
     if "well_known_protos" in external_deps:
