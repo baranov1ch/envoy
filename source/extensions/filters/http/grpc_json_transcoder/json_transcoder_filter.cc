@@ -415,11 +415,15 @@ Http::FilterTrailersStatus JsonTranscoderFilter::encodeTrailers(Http::HeaderMap&
     // Send serialized status only if no body has been sent yet.
     auto status = Grpc::Common::getGrpcStatusBin(trailers);
     if (!status) {
+      // If no rpc.Status object was sent in grpc-status-bin, construct status from message
+      // and code from trailer values.
       status = std::make_unique<google::rpc::Status>();
       status->set_code(*grpc_status);
+      response_headers_->removeGrpcStatus();
 
       if (grpc_message_header) {
         status->set_message(grpc_message_header->value().c_str());
+        response_headers_->removeGrpcMessage();
       }
     }
 
@@ -430,12 +434,13 @@ Http::FilterTrailersStatus JsonTranscoderFilter::encodeTrailers(Http::HeaderMap&
       ENVOY_LOG(debug, "Transcoding status error {}", translate_status.ToString());
     } else if (!json_status.empty()) {
       Buffer::OwnedImpl status_data(json_status);
-      encoder_callbacks_->addEncodedData(status_data, true);
+      encoder_callbacks_->addEncodedData(status_data, false);
     }
   }
 
   response_headers_->insertContentLength().value(
       encoder_callbacks_->encodingBuffer() ? encoder_callbacks_->encodingBuffer()->length() : 0);
+
   return Http::FilterTrailersStatus::Continue;
 }
 
